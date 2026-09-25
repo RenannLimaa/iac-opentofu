@@ -48,60 +48,59 @@ Este benchmark afere as latências completas de ciclo de vida do OpenTofu em tr�
 * **O que afere:** Como o escalonador lida com a criação concorrente de 9 containers em paralelo (8 workers + 1 ingress), a resolução de múltiplas interfaces de rede virtuais por container e o impacto no tempo de desmontagem concorrente durante o `destroy`.
 
 ### Principais Conclusões
-* **Escalabilidade:** Escalar de 1 container (`minimal`) para 9 containers (`multi-worker`) elevou o tempo de criação (`apply`) em apenas **12,2%** (de $2,64\text{ s}$ para $2,96\text{ s}$), demonstrando a eficiência do escalonador paralelo do grafo (DAG) do OpenTofu sob `-parallelism=10`.
-* **Assimetria entre Criação e Destruição:** A destruição (`destroy`) leva consistentemente entre **$1,76\times$ e $1,82\times$ mais tempo** do que a criação em todos os arquétipos ($4,81\text{ s}$ a $5,20\text{ s}$). O encerramento ordenado de processos via sinal, liberação de interfaces de rede e desconexão de volumes no provedor justificam essa assimetria.
-* **Gargalo da Atualização de Estado:** A verificação de grafo puramente em memória (`plan_refresh_false`) executa em $\sim 290\text{ ms} - 320\text{ ms}$, enquanto a detecção ativa de drift (`plan_refresh_true`) demanda $\sim 2,32\text{ s} - 2,34\text{ s}$. Aproximadamente **87% do tempo do plano é gasto em I/O de rede e socket com o provedor**, e não no cálculo interno do OpenTofu.
+* **Escalabilidade:** Escalar de 1 container (`minimal`) para 9 containers (`multi-worker`) elevou o tempo de criação (`apply`) em apenas **12,2%** (de $2,64\text{s}$ para $2,96\text{s}$), demonstrando a eficiência do escalonador paralelo do grafo (DAG) do OpenTofu sob `-parallelism=10`.
+* **Assimetria entre Criação e Destruição:** A destruição (`destroy`) leva consistentemente entre **$1,76\times$ e $1,82\times$ mais tempo** do que a criação em todos os arquétipos ($4,81\text{s}$ a $5,20\text{s}$). O encerramento ordenado de processos via sinal, liberação de interfaces de rede e desconexão de volumes no provedor justificam essa assimetria.
+* **Gargalo da Atualização de Estado:** A verificação de grafo puramente em memória (`plan_refresh_false`) executa em $\sim 290\text{ms} - 320\text{ms}$, enquanto a detecção ativa de drift (`plan_refresh_true`) demanda $\sim 2,32\text{s} - 2,34\text{s}$. Aproximadamente 87% do tempo do plano é gasto em I/O de rede e socket com o provedor, e não no cálculo interno do OpenTofu.
 
 ---
 
 ## Resultados
 
-| Arquétipo | Fase | $n$ | Média ($s$) | Mediana ($s$) | Desvio Padrão ($s$) | IC 95% Inferior ($s$) | IC 95% Superior ($s$) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`minimal`** | `init` | 50 | 0,4814 | 0,4490 | 0,1151 | 0,4554 | 0,5177 |
-| | `plan_initial` | 50 | 0,2907 | 0,2917 | 0,0465 | 0,2781 | 0,3037 |
-| | **`apply`** | 50 | **2,6366** | **2,5660** | 0,2313 | **2,5761** | **2,7069** |
-| | `plan_refresh_false` | 50 | 0,2960 | 0,2939 | 0,0480 | 0,2834 | 0,3110 |
-| | `plan_refresh_true` | 50 | 2,3156 | 2,3150 | 0,0464 | 2,3035 | 2,3291 |
-| | **`destroy`** | 50 | **4,8061** | **4,7421** | 0,2071 | **4,7514** | **4,8666** |
-| **`two-tier`** | `init` | 50 | 0,4580 | 0,4481 | 0,0707 | 0,4442 | 0,4802 |
-| | `plan_initial` | 50 | 0,2949 | 0,3015 | 0,0333 | 0,2857 | 0,3037 |
-| | **`apply`** | 50 | **2,8482** | **2,8397** | 0,1075 | **2,8212** | **2,8802** |
-| | `plan_refresh_false` | 50 | 0,3181 | 0,3294 | 0,0420 | 0,3075 | 0,3294 |
-| | `plan_refresh_true` | 50 | 2,3437 | 2,3558 | 0,0396 | 2,3338 | 2,3544 |
-| | **`destroy`** | 50 | **4,9525** | **4,9517** | 0,0547 | **4,9378** | **4,9673** |
-| **`multi-worker`** | `init` | 50 | 0,4491 | 0,4392 | 0,0546 | 0,4369 | 0,4660 |
-| | `plan_initial` | 50 | 0,2775 | 0,2636 | 0,0319 | 0,2695 | 0,2867 |
-| | **`apply`** | 50 | **2,9573** | **2,9394** | 0,0930 | **2,9334** | **2,9830** |
-| | `plan_refresh_false` | 50 | 0,2936 | 0,2860 | 0,0294 | 0,2857 | 0,3016 |
-| | `plan_refresh_true` | 50 | 2,3397 | 2,3320 | 0,0264 | 2,3330 | 2,3470 |
-| | **`destroy`** | 50 | **5,2032** | **5,1970** | 0,0554 | **5,1883** | **5,2186** |
+| Tipo de Ambiente | Fase | Média ($s$) | Desvio Padrão ($s$) | IC 95% Inferior ($s$) | IC 95% Superior ($s$) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| *minimal* | `init` | 0,4814 | 0,1151 | 0,4554 | 0,5177 |
+| | `plan_initial` | 0,2907 | 0,0465 | 0,2781 | 0,3037 |
+| | **`apply`** | **2,6366** | 0,2313 | **2,5761** | **2,7069** |
+| | `plan_refresh_false` | 0,2960 | 0,0480 | 0,2834 | 0,3110 |
+| | `plan_refresh_true` | 2,3156 | 0,0464 | 2,3035 | 2,3291 |
+| | **`destroy`** | **4,8061** | 0,2071 | **4,7514** | **4,8666** |
+| *two-tier* | `init` | 0,4580 | 0,0707 | 0,4442 | 0,4802 |
+| | `plan_initial` | 0,2949 | 0,0333 | 0,2857 | 0,3037 |
+| | **`apply`** | **2,8482** | 0,1075 | **2,8212** | **2,8802** |
+| | `plan_refresh_false` | 0,3181 | 0,0420 | 0,3075 | 0,3294 |
+| | `plan_refresh_true` | 2,3437 | 0,0396 | 2,3338 | 2,3544 |
+| | **`destroy`** | **4,9525** | 0,0547 | **4,9378** | **4,9673** |
+| *multi-worker* | `init` | 0,4491 | 0,0546 | 0,4369 | 0,4660 |
+| | `plan_initial` | 0,2775 | 0,0319 | 0,2695 | 0,2867 |
+| | **`apply`** | **2,9573** | 0,0930 | **2,9334** | **2,9830** |
+| | `plan_refresh_false` | 0,2936 | 0,0294 | 0,2857 | 0,3016 |
+| | `plan_refresh_true` | 2,3397 | 0,0264 | 2,3330 | 2,3470 |
+| | **`destroy`** | **5,2032** | 0,0554 | **5,1883** | **5,2186** |
 
 ---
 
-## Análise Técnica Fase a Fase
+## Análise de Fases
 
 ### init
-* Nos três cenários, a inicialização com o provedor previamente cacheado levou entre **$0,43\text{ s}$ e $0,48\text{ s}$**.
+* Nos três cenários, a inicialização com o provedor previamente cacheado levou entre **$0,43\text{s}$ e $0,48\text{s}$**.
 * A pequena variabilidade observada decorre exclusivamente de tempo de criação de processo e leitura de disco.
 
 ### plan_initial
-* A construção do grafo acíclico dirigido (DAG) antes da existência de recursos demanda entre **$0,28\text{ s}$ e $0,30\text{ s}$**.
-* O arquétipo `multi-worker` ($0,278\text{ s}$) foi ligeiramente mais ágil que o `two-tier` ($0,295\text{ s}$) devido ao menor número de regras de dependência cruzada direta (workers em paralelo vs. ordenação estrita com volumes).
+* A construção do grafo acíclico dirigido (DAG) antes da existência de recursos demanda entre **$0,28\text{s}$ e $0,30\text{s}$**.
+* O cenário `multi-worker` ($0,278\text{s}$) foi ligeiramente mais ágil que o `two-tier` ($0,295\text{s}$) devido ao menor número de regras de dependência cruzada direta (workers em paralelo vs. ordenação estrita com volumes).
 
 ### apply
-* Linha de base `minimal`: $2,64\text{ s}$ ($95\%\text{ IC: } [2,58\text{ s}, 2,71\text{ s}]$).
-* Arquétipo `two-tier`: $2,85\text{ s}$ ($95\%\text{ IC: } [2,82\text{ s}, 2,88\text{ s}]$).
-* Arquétipo `multi-worker`: $2,96\text{ s}$ ($95\%\text{ IC: } [2,93\text{ s}, 2,98\text{ s}]$).
+* *minimal*: $2,64\text{s}$ ($95\%\text{ IC: } [2,58\text{s}, 2,71\text{s}]$).
+* *two-tier*: $2,85\text{s}$ ($95\%\text{ IC: } [2,82\text{s}, 2,88\text{s}]$).
+* *multi-worker*: $2,96\text{s}$ ($95\%\text{ IC: } [2,93\text{s}, 2,98\text{s}]$).
 * O paralelismo do OpenTofu mitigou quase todo o custo adicional de criar 8 instâncias adicionais de containers.
 
-### plan_refresh_false vs `plan_refresh_true`
-* `plan -refresh=false`: Valida a configuração contra o estado salvo em memória ($0,29\text{ s} - 0,32\text{ s}$).
-* `plan -refresh=true`: Consulta o estado em tempo real no socket do Docker daemon ($2,32\text{ s} - 2,34\text{ s}$).
-* A diferença ($\Delta \approx 2,03\text{ s}$) evidencia o custo de chamadas remotas/IPC para checagem de integridade de recursos.
+### plan_refresh_false vs plan_refresh_true
+* `plan -refresh=false`: Valida a configuração contra o estado salvo em memória ($0,29\text{s} - 0,32\text{ s}$).
+* `plan -refresh=true`: Consulta o estado em tempo real no socket do Docker daemon ($2,32\text{s} - 2,34\text{s}$).
+* A diferença ($\Delta \approx 2,03\text{s}$) evidencia o custo de chamadas remotas para checagem de integridade de recursos.
 
 ### destroy
-* `minimal`: $4,81\text{ s}$
-* `two-tier`: $4,95\text{ s}$
-* `multi-worker`: $5,20\text{ s}$
-* A destruição apresentou dispersão estatística reduzida ($\text{stddev} = 0,055\text{ s}$ no `multi-worker`), mostrando alta previsibilidade no encerramento de containers e redes.
+* *minimal*: $4,81\text{s}$
+* *two-tier*: $4,95\text{s}$
+* *multi-worker*: $5,20\text{s}$
